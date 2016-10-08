@@ -15,51 +15,37 @@
 
 package activemq.jmsSender;
 
-import javax.jms.Connection;
-import javax.jms.ConnectionFactory;
+import org.springframework.jms.core.JmsTemplate;
+import org.springframework.jms.core.MessageCreator;
+
 import javax.jms.Destination;
 import javax.jms.JMSException;
 import javax.jms.Message;
-import javax.jms.MessageProducer;
 import javax.jms.Session;
 
-import org.springframework.stereotype.Service;
-
-/**
- * @author kabraa
- */
-@Service
 public class JmsMessageSender {
 
-    private ConnectionFactory factory;
+	private JmsTemplate jmsTemplate;
 
-    private Connection connection;
+	private Destination destination;
 
-    private Session session;
+	public void send(String message) {
+		jmsTemplate.send(destination, new JmsMessageCreator(message));
+	}
 
-    private MessageProducer producer;
+	private static final class JmsMessageCreator implements MessageCreator {
 
-    public JmsMessageSender(ConnectionFactory factory, String queueName) throws JMSException {
-        this.factory = factory;
-        connection = factory.createConnection();
-        connection.start();
-        session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
-        Destination destination = session.createQueue(queueName);
-        producer = session.createProducer(destination);
-    }
+		private final String notification;
 
-    public void run() throws JMSException {
-        for (int i = 0; i < 100; i++) {
-            System.out.println("Creating Message " + i);
-            Message message = session.createTextMessage("Hello World!"+i);
-            producer.send(message);
-        }
-    }
+		private JmsMessageCreator(String notification) {
+			this.notification = notification;
+		}
 
-    public void close() throws JMSException {
-        if (connection != null) {
-            connection.close();
-        }
-    }
+		@Override
+		public Message createMessage(Session session) throws JMSException {
+			Message message = session.createObjectMessage(notification);
+			return message;
+		}
+	}
 
 }
